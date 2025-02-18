@@ -1,0 +1,21 @@
+{
+  "files.associations": {
+    ".fantomasignore": "ignore",
+    "__hash_table": "cpp",
+    "array": "cpp",
+    "type_traits": "cpp",
+    "limits": "cpp",
+    "ratio": "cpp",
+    "tuple": "cpp",
+    "variant": "cpp",
+    "charconv": "cpp",
+    "compare": "cpp",
+    "complex": "cpp",
+    "functional": "cpp",
+    "utility": "cpp",
+    "__bit_reference": "cpp",
+    "__split_buffer": "cpp",
+    "string": "cpp",
+    "vector": "cpp"
+  }
+}

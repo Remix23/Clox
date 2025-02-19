@@ -5,4 +5,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+// Flags
+#define DEBUG_TRACE_EXECUTION
+
+
 #endif

@@ -1,7 +1,0 @@
-Test system:
-    - 
-
-VM:
-    - More efficient line encoding (ch: 14)
-    - Allow support for more constants than 256 (add OP_CONSTANT_LONG)
-    - Implement reallocate without the std malloc, realloc, free

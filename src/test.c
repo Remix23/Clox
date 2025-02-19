@@ -33,9 +33,13 @@ void testerRunner (const char* test_path) {
         
         test_files++;
         printf ("File %3d: %s\n", test_files, entry -> d_name);
-    }
+}
 
     closedir(test_dir);
     printf("Total files: %d\n", test_files);
 }
 
+
+TestResult run_test () {
+    return TEST_OK;
+}

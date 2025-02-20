@@ -1,9 +1,11 @@
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 
 #include "chunk.h"
 #include "memory.h"
 #include "value.h"
+#include "object.h"
 
 void initValueArray (ValueArray* arr) {
     arr->capacity = 0;
@@ -35,6 +37,7 @@ void printValue (Value value) {
         break;
     case VAL_NIL: printf("nil"); break;
     case VAL_NUMBER: printf("%g", value.as.number); break;
+    case VAL_OBJ: printObject(value); break;
     default:
         break;
     }
@@ -47,6 +50,13 @@ bool valuesEqual (Value a, Value b) {
         case VAL_BOOL: return a.as.boolean == b.as.boolean;
         case VAL_NIL: return true;
         case VAL_NUMBER: return a.as.number == b.as.number;
+        case VAL_OBJ: {
+            ObjString* aString = AS_STRING(a);
+            ObjString* bString = AS_STRING(b);
+            if (aString->length != bString->length) return false;
+
+            return memcmp(aString->chars, bString->chars, aString->length) == 0;
+        }
         default: return false; // unreachable
     }
 }

@@ -53,6 +53,10 @@ static void repl () {
             break;
         }
 
+        if (line[0] == 'q') {
+            break;
+        }
+
         interpret(line);
     }
 }

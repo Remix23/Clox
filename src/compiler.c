@@ -6,6 +6,7 @@
 #include "common.h"
 #include "chunk.h"
 #include "scanner.h"
+#include "object.h"
 
 #ifdef DEBUG_PRINT_CODE
 #include "debug.h"
@@ -173,6 +174,11 @@ static void number () {
     emitConstant(NUMBER_VAL(value));
 }
 
+static void string () {
+    Value val = OBJ_VAL(copyString(parser.previous.start + 1, parser.previous.length - 2));
+    emitConstant(val);
+}
+
 static void grouping () {
     expression ();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression");
@@ -261,7 +267,7 @@ ParserRule rules [] = {
     
     // literals
     [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_STRING] = {NULL, NULL, PREC_NONE},
+    [TOKEN_STRING] = {string, NULL, PREC_NONE},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
 
     // booleans

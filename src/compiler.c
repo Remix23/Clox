@@ -153,6 +153,16 @@ static void binary () {
         case TOKEN_MINUS: emitByte(OP_SUBTRACT); break;
         case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
         case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
+
+        case TOKEN_EQUAL_EQUAL: emittbyte(OP_EQUAL); break;
+        case TOKEN_BANG_EQUAL: emitByte(OP_EQUAL); emitByte(OP_NOT); break;
+        
+        case TOKEN_LESS: emitByte(OP_LESS); break;
+        case TOKEN_LESS_EQUAL: emitByte(OP_GREATER); emitByte(OP_NOT); break;
+
+        case TOKEN_GREATER: emitByte(OP_GREATER); break;
+        case TOKEN_GREATER_EQUAL: emitByte(OP_LESS); emitByte(OP_NOT); break;
+        
         default: // unreachable
             return;
     }
@@ -238,17 +248,16 @@ ParserRule rules [] = {
     [TOKEN_SLASH] = {NULL, binary, PREC_FACTOR},
 
     // the rest
-    [TOKEN_BANG] = {unary, NULL, PREC_NONE},
-    [TOKEN_BANG_EQUAL] = {NULL, NULL, PREC_NONE},
 
     [TOKEN_EQUAL] = {NULL, NULL, PREC_NONE},
 
     // comparisons
-    [TOKEN_EQUAL_EQUAL] = {NULL, NULL, PREC_NONE},
-    [TOKEN_LESS] = {NULL, NULL, PREC_NONE},
-    [TOKEN_LESS_EQUAL] = {NULL, NULL, PREC_NONE},
-    [TOKEN_GREATER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_GREATER_EQUAL] = {NULL, NULL, PREC_NONE},
+    [TOKEN_BANG_EQUAL] = {NULL, binary, PREC_NONE},
+    [TOKEN_EQUAL_EQUAL] = {NULL, binary, PREC_NONE},
+    [TOKEN_LESS] = {NULL, binary, PREC_NONE},
+    [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_NONE},
+    [TOKEN_GREATER] = {NULL, binary, PREC_NONE},
+    [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_NONE},
     
     // literals
     [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_NONE},
@@ -261,6 +270,7 @@ ParserRule rules [] = {
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
     
     // binary operands
+    [TOKEN_BANG] = {unary, NULL, PREC_NONE},
     [TOKEN_AND] = {NULL, NULL, PREC_NONE},
     [TOKEN_OR] = {NULL, NULL, PREC_NONE},
 

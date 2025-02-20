@@ -13,7 +13,18 @@ typedef enum {
     OP_TRUE,
     OP_FALSE,
     OP_NIL,
+    
+
+    // Logical
+    // ! Normmally we would make more operations but less complex
+    // ? eg. make a OP_NOT_EQUAL, OP_LESS_EQUAL, OP_GREATER_EQUAL
+    OP_EQUAL,
+    OP_GREATER, 
+    OP_LESS,
+
     OP_NOT,
+    OP_OR,
+    OP_AND,
 
     // Binary operations
     OP_ADD,

@@ -154,7 +154,7 @@ static void binary () {
         case TOKEN_STAR: emitByte(OP_MULTIPLY); break;
         case TOKEN_SLASH: emitByte(OP_DIVIDE); break;
 
-        case TOKEN_EQUAL_EQUAL: emittbyte(OP_EQUAL); break;
+        case TOKEN_EQUAL_EQUAL: emitByte(OP_EQUAL); break;
         case TOKEN_BANG_EQUAL: emitByte(OP_EQUAL); emitByte(OP_NOT); break;
         
         case TOKEN_LESS: emitByte(OP_LESS); break;
@@ -252,19 +252,19 @@ ParserRule rules [] = {
     [TOKEN_EQUAL] = {NULL, NULL, PREC_NONE},
 
     // comparisons
-    [TOKEN_BANG_EQUAL] = {NULL, binary, PREC_NONE},
-    [TOKEN_EQUAL_EQUAL] = {NULL, binary, PREC_NONE},
-    [TOKEN_LESS] = {NULL, binary, PREC_NONE},
-    [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_NONE},
-    [TOKEN_GREATER] = {NULL, binary, PREC_NONE},
-    [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_NONE},
+    [TOKEN_BANG_EQUAL] = {NULL, binary, PREC_EQUALITY},
+    [TOKEN_EQUAL_EQUAL] = {NULL, binary, PREC_EQUALITY},
+    [TOKEN_LESS] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_GREATER] = {NULL, binary, PREC_COMPARISON},
+    [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_COMPARISON},
     
     // literals
     [TOKEN_IDENTIFIER] = {NULL, NULL, PREC_NONE},
     [TOKEN_STRING] = {NULL, NULL, PREC_NONE},
     [TOKEN_NUMBER] = {number, NULL, PREC_NONE},
 
-    // binary
+    // booleans
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},

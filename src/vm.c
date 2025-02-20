@@ -40,8 +40,8 @@ static Value peek (int distance) {
 static bool isFalsey (Value value) {
     // zero is falsey
     if (IS_NUMBER(value)) return AS_NUMBER(value) == 0;
+    if (IS_NIL(value)) return true;
 
-    
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 

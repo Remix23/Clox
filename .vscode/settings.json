@@ -16,6 +16,17 @@
     "__bit_reference": "cpp",
     "__split_buffer": "cpp",
     "string": "cpp",
-    "vector": "cpp"
+    "vector": "cpp",
+    "compiler.h": "c",
+    "__node_handle": "cpp",
+    "bitset": "cpp",
+    "deque": "cpp",
+    "__memory": "cpp",
+    "locale": "cpp",
+    "optional": "cpp",
+    "chrono": "cpp",
+    "format": "cpp",
+    "system_error": "cpp",
+    "text_encoding": "c"
   }
 }

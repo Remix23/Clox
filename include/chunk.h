@@ -9,12 +9,19 @@ typedef enum {
     OP_CONSTANT,
     OP_NEGATE,
 
+    // booleans
+    OP_TRUE,
+    OP_FALSE,
+    OP_NIL,
+    OP_NOT,
+
     // Binary operations
     OP_ADD,
     OP_SUBTRACT,
     OP_MULTIPLY,
     OP_DIVIDE,
 
+    // TODO: Add support for 
     OP_CONSTANT_LONG,
 } OpCode;
 

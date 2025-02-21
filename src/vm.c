@@ -35,6 +35,7 @@ static void runtimeError (const char* format, ...) {
 
 void initVM () {
     vm.objects = NULL;
+    initHashMap(&vm.strings, 10);
     resetStack();
 }
 
@@ -67,6 +68,7 @@ void concatenate () {
 
 void freeVM () {
     freeObjects();
+    freeHashMap(&vm.strings);
 }
 
 void push (Value value) {

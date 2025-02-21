@@ -3,6 +3,9 @@
 
 #include "chunk.h"
 #include "value.h"
+#include "object.h"
+#include "memory.h"
+#include "hashmap.h"
 
 #define MAX_STACK 256 // grow dynamically?
 
@@ -11,6 +14,7 @@ typedef struct {
     uint8_t* ip;
     Value stack[MAX_STACK];
     Value* stackTop;
+    HashMap strings; // interned strings
     Obj* objects;
 } VM;
 

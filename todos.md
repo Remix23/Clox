@@ -9,6 +9,8 @@
 - [ ] String interpolation as in python: f string with f" {} "
 - [ ] Implement reallocate without the std malloc, realloc, free
 - [ ] Dynamically resized stack
+- [ ] Hash Map for various types \[ arbitrary type with hash well defined \]
+- [ ] Hash table benchmark with different tweaks (conflicts resolution, tombstones?, hash func, growth factor)
 
 ### Interesing notes
 
@@ -27,3 +29,4 @@
 1. Introduce string interpolation
 2. Introduce token: GENERIC_INDENTIFIER token that when parsing consumes the bounding '<' abc '>' and if not found returns an error
 3. Contextual keywords:
+4. For the grammar some expressions (e.g. declarations) aren't allowed everywhere (disntiction between declaration and other statements)

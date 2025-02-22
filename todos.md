@@ -30,6 +30,7 @@
 2. Introduce token: GENERIC_INDENTIFIER token that when parsing consumes the bounding '<' abc '>' and if not found returns an error
 3. Contextual keywords:
 4. For the grammar some expressions (e.g. declarations) aren't allowed everywhere (disntiction between declaration and other statements)
+5. Add OP_POPN instruction to quickly pop multiple values from the stack
 
 ### Variables:
 

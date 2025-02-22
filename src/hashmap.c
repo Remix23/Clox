@@ -44,7 +44,7 @@ static void adjustCapacity (HashMap* map, int capacity) {
 
     for (int i = 0; i < map -> capacity; i++) {
         Entry* entry = &map -> entries[i];
-        if (entry == NULL) continue;
+        if (entry -> key == NULL) continue;
 
         Entry* dest = findEntry(entries, capacity, entry -> key);
         dest -> key = entry -> key;

@@ -16,6 +16,7 @@ typedef struct {
     Value* stackTop;
     HashMap strings; // interned strings
     Obj* objects;
+    HashMap globals;
 } VM;
 
 typedef enum {

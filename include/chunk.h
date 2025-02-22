@@ -34,6 +34,15 @@ typedef enum {
 
     // TODO: Add support for 
     OP_CONSTANT_LONG,
+
+    // statements
+    OP_PRINT,
+    OP_POP,
+
+    // declatartions
+    OP_DEFINE_GLOBAL,
+    OP_GET_GLOBAL,
+    OP_SET_GLOBAL,
 } OpCode;
 
 typedef struct {

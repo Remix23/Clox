@@ -19,7 +19,7 @@
 - [ ] Extend clox to allow for more than 256 local variables
 - [ ] Single assigment (not mutable values) -> pick a keyword and implment the functionality (reassigment yields a runtime error)
 - [ ] Make resolving local variables quicker (e.g. binary search)
-- [ ] Compile the ternary operator
+- [x] Compile the ternary operator
 - [ ] Add pattern maching: with switch, case
 
 ### Interesing notes

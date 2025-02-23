@@ -1,6 +1,6 @@
-var i = 0;
+var i = 11;
 
-while (i <= 10) {
+for (; i <= 10;) {
     print i;
     i = i + 1;
 }

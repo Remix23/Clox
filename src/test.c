@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "common.h"
 #include "chunk.h"
@@ -38,7 +39,6 @@ void testerRunner (const char* test_path) {
     closedir(test_dir);
     printf("Total files: %d\n", test_files);
 }
-
 
 TestResult run_test () {
     return TEST_OK;

@@ -576,7 +576,35 @@ static void forStatement () {
         expression();
         consume(TOKEN_SEMICOLON, "Expect ';' after loop condition");
     }
-    
+
+    int exit_jump = emitJump(OP_JUMP_IF_FALSE);
+
+    emitByte(OP_POP); // pop th condition assuming it is true
+
+    int body_jump = emitJump(OP_JUMP);
+
+    int increment_start = currentChunk() -> count;
+
+    // check for increment
+    if (match(TOKEN_RIGHT_PAREN)) {
+        // no increment
+    } else {
+        expression ();
+        emitByte(OP_POP);
+        consume(TOKEN_RIGHT_PAREN, "Expect ')' after the loop initializer");
+    }
+
+    emitJumpBack(start_loop);
+
+    patchJump(body_jump);
+
+    // parse loop body
+    statement();
+
+    emitJumpBack(increment_start);
+
+    patchJump(exit_jump);
+    emitByte(OP_POP);
 
     endScope();
 }
@@ -704,8 +732,7 @@ static void statement () {
 
 // declarations
 static void varDeclaration () {
-    // parser.current points to the var
-    advance(); // points to the identifier
+    // parser.current points to the identifier
 
     // consume the identifier
     uint8_t global = parseVariable("Expect variable name");
@@ -728,8 +755,8 @@ static void funDeclaration () {
 static void declaration () {
 
     switch (peek()) {
-        case TOKEN_VAR: varDeclaration (); break;
-        case TOKEN_FUN: funDeclaration (); break;
+        case TOKEN_VAR: advance(); varDeclaration (); break;
+        case TOKEN_FUN: advance(); funDeclaration (); break;
 
         default:
             statement();

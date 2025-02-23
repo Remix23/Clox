@@ -449,17 +449,23 @@ static void literal (bool canAssign) {
 static void ternary (bool canAssign) {
     // parser.previous points to the question mark
 
+    int else_branch = emitJump(OP_JUMP_IF_FALSE);
+
     // parsing the true expression
     printf("Parsing ternary expression\n");
+    emitByte(OP_POP);
     expression();
+
+    int exit = emitJump(OP_JUMP);
+    patchJump(else_branch);
+
+    emitByte(OP_POP);
 
     // consume the colon
     consume(TOKEN_COLON, "Expect ':' after then branch");
 
-    printf("Consumed colon\n");
-
-    // parsing the false expression
     expression();
+    patchJump(exit);
 }
 
 static void comma (bool canAssign) {

@@ -11,6 +11,16 @@
 - [ ] Dynamically resized stack
 - [ ] Hash Map for various types \[ arbitrary type with hash well defined \]
 - [ ] Hash table benchmark with different tweaks (conflicts resolution, tombstones?, hash func, growth factor)
+- [ ] Introduce string interpolation
+- [ ] Introduce token: GENERIC_INDENTIFIER token that when parsing consumes the bounding '<' abc '>' and if not found returns an error
+- [ ] Contextual keywords:
+- [ ] For the grammar some expressions (e.g. declarations) aren't allowed everywhere (disntiction between declaration and other statements)
+- [ ] Add OP_POPN instruction to quickly pop multiple values from the stack
+- [ ] Extend clox to allow for more than 256 local variables
+- [ ] Single assigment (not mutable values) -> pick a keyword and implment the functionality (reassigment yields a runtime error)
+- [ ] Make resolving local variables quicker (e.g. binary search)
+- [ ] Compile the ternary operator
+- [ ] Add pattern maching: with switch, case
 
 ### Interesing notes
 
@@ -25,12 +35,6 @@
 ### Chalenges:
 
 ##### Chapter 16:
-
-1. Introduce string interpolation
-2. Introduce token: GENERIC_INDENTIFIER token that when parsing consumes the bounding '<' abc '>' and if not found returns an error
-3. Contextual keywords:
-4. For the grammar some expressions (e.g. declarations) aren't allowed everywhere (disntiction between declaration and other statements)
-5. Add OP_POPN instruction to quickly pop multiple values from the stack
 
 ### Variables:
 

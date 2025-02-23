@@ -3,9 +3,10 @@ hearder := ./include
 CFLAGS := -I $(hearder) -std=c99 -Wall -fsanitize=address
 
 SRC := $(shell find src -maxdepth 1 -name "*.c")
+HEADERS = $(shell find include -maxdepth 1 -name "*.h")
 EXE := Clox
 
-${EXE}: ${SRC}
+${EXE}: ${SRC} ${HEADERS}
 	@echo "Building..."
 	@echo "Flags: ${CFLAGS}"
 	@echo "Source: ${SRC}"

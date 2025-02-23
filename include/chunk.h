@@ -23,6 +23,7 @@ typedef enum {
     OP_LESS,
 
     OP_NOT,
+    // Logical
     OP_OR,
     OP_AND,
 
@@ -47,6 +48,12 @@ typedef enum {
     // local varialbles
     OP_SET_LOCAL,
     OP_GET_LOCAL,
+
+    // control flow
+    OP_JUMP_IF_FALSE,
+    OP_JUMP,
+    OP_JUMP_BACK,
+
 } OpCode;
 
 typedef struct {

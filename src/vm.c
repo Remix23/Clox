@@ -228,6 +228,28 @@ static InterpretResult run () {
                 break;
             }
 
+            case OP_JUMP_IF_FALSE: {
+                uint16_t offset = (uint16_t)READ_BYTE() << 8;
+                offset = offset | READ_BYTE();
+                if (isFalsey(peek(0))) vm.ip += offset;
+                break;
+            }
+
+            case OP_JUMP: 
+            {
+                uint16_t offset = (uint16_t)READ_BYTE() << 8;
+                offset = offset | READ_BYTE();
+                vm.ip += offset;
+                break;
+            }
+
+            case OP_JUMP_BACK: {
+                uint16_t offset = (uint16_t)READ_BYTE() << 8;
+                offset = offset | READ_BYTE();
+                vm.ip -= offset;
+                break;
+            }
+
             default:
             break;
         }

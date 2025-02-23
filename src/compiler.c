@@ -23,6 +23,7 @@ typedef struct {
 
 typedef enum {
     PREC_NONE,
+    PREC_COMMA,      // ,
     PREC_ASSIGNMENT,  // =
     PREC_OR,          // or
     PREC_AND,         // and
@@ -64,6 +65,8 @@ Chunk* compilingChunk;
 static void expression ();
 static void statement ();
 static void declaration ();
+static void varDeclaration ();
+static void expressionStatement ();
 static void beginScope ();
 static void endScope ();
 static ParserRule* getRule (TokenType type);
@@ -123,6 +126,54 @@ static void emitBytes (uint8_t b1, uint8_t b2) {
 
 static void emitConstant (Value val) {
     emitBytes(OP_CONSTANT, makeConstant(val));
+}
+
+static int emitJump (uint8_t instruction) {
+    emitByte(instruction);
+
+    emitByte(0xff);
+    emitByte(0xff);
+
+    // emit empty byte the jump offset
+
+    // return the offset of the jump in the chunk code
+    return currentChunk() -> count - 2;
+}
+
+static void emitJumpBack (int start) {
+    emitByte(OP_JUMP_BACK);
+
+    int curr_pos = currentChunk() -> count;
+
+    // printf("Current position: %d\n", curr_pos);
+
+    // account for the two bytes the pointer moves while reading the command
+    int jump = curr_pos + 2 - start;
+
+    if (jump > UINT16_MAX) {
+        errorAtCurrent("Loop body too large");
+    }
+
+    uint8_t b1 = (jump >> 8) & 0xff;
+    uint8_t b2 = jump & 0xff;
+
+    emitBytes(b1, b2);
+} 
+
+static void patchJump (int offset) {
+    // size of the chunk after parsing statements
+    int top = currentChunk() -> count;
+
+    // -2 offsets for the bytes used for the jump instruction
+    int jump = top - offset - 2;
+
+    // fix the value
+    if (jump > UINT8_MAX) {
+        errorAtCurrent("Too much code to jump over");
+    }
+
+    currentChunk() -> code[offset] = (jump >> 8) & 0xff;
+    currentChunk() -> code[offset + 1] = jump & 0xff;
 }
 
 static void emitReturn () {
@@ -261,7 +312,7 @@ static void namedVariable (Token name, bool canAssign) {
     }
 
     if (match(TOKEN_EQUAL) && canAssign) {
-        expression();
+        parsePrecedence(PREC_ASSIGNMENT);
         emitBytes(setOp, (uint8_t)arg);
     } else {
         emitBytes(getOp, (uint8_t)arg);
@@ -327,6 +378,32 @@ static void binary (bool canAssign) {
     }
 }
 
+static void and_ (bool canAssign) {
+
+    // exp1 && exp2 -> if exp1 is false jump after expr2
+
+    int and_off = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP); // pop result of epxr1 
+    parsePrecedence(PREC_AND); // expr2
+    
+    // expr2 left on stack (since expr1 is true the result of and it equal to expr2)
+
+    patchJump(and_off);
+}
+
+static void or_ (bool canAssign) {
+    int whole = emitJump(OP_JUMP_IF_FALSE);
+    int expr1_true = emitJump(OP_JUMP);
+
+    patchJump(whole);
+    emitByte(OP_POP);
+
+    parsePrecedence(PREC_OR);
+
+    patchJump(expr1_true);
+
+}
+
 static void number (bool canAssign) {
     double value = strtod(parser.previous.start, NULL);
     emitConstant(NUMBER_VAL(value));
@@ -387,7 +464,8 @@ static void ternary (bool canAssign) {
 
 static void comma (bool canAssign) {
     // parser.previous points to the comma
-    // expression();
+    emitByte(OP_POP);
+    parsePrecedence(PREC_ASSIGNMENT);
 }
 
 static void printStatement () {
@@ -419,6 +497,84 @@ static void blockStatement () {
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after block");
 }
 
+static void ifStatement () {
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if' statement");
+
+    expression(); // leave the result on the stack
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition");
+
+    // emit jump
+    int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP); // pop the condition, a statement always returns the stack to its original state
+    statement();
+    int elseJump = emitJump(OP_JUMP);
+
+    // patch jump
+    patchJump(thenJump);
+
+    emitByte(OP_POP); // one of the pops will always execute the other skipped
+
+    if (match(TOKEN_ELSE)) statement();
+
+    patchJump(elseJump);
+}
+
+static void whileStatement () {
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while' statement");
+
+    int loop_start = currentChunk() -> count;
+
+    // printf("Loop start: %d\n", loop_start);
+
+    expression();
+
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition");
+
+    int exit_jump = emitJump(OP_JUMP_IF_FALSE);
+
+    emitByte(OP_POP); // pop the condition
+
+    statement();
+
+    emitJumpBack(loop_start);
+
+    patchJump(exit_jump);
+
+    emitByte(OP_POP); // pop the condition when exiting the loop
+}
+
+static void forStatement () {
+
+    beginScope();
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for' statement");
+
+    // initializer
+    // can be a declaration or an expression
+    if (match(TOKEN_VAR)) {
+        varDeclaration();
+    } else if (match(TOKEN_SEMICOLON)) {
+        // no initializer
+    } else {
+        expressionStatement();
+    }
+
+    int start_loop = currentChunk() -> count;
+
+    // condition
+
+    if (match(TOKEN_SEMICOLON)) {
+        // no condition
+    } else {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' after loop condition");
+    }
+    
+
+    endScope();
+}
+
 static void expressionStatement () {
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after expression");
@@ -447,7 +603,7 @@ ParserRule rules [] = {
     [TOKEN_RIGHT_BRACE] = {NULL, NULL, PREC_NONE},
 
     // colons and dots
-    [TOKEN_COMMA] = {NULL, NULL, PREC_NONE},
+    [TOKEN_COMMA] = {NULL, comma, PREC_COMMA},
     [TOKEN_DOT] = {NULL, NULL, PREC_NONE},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_COLON] = {NULL, NULL, PREC_NONE},
@@ -485,8 +641,8 @@ ParserRule rules [] = {
     
     // binary operands
     [TOKEN_BANG] = {unary, NULL, PREC_NONE},
-    [TOKEN_AND] = {NULL, NULL, PREC_NONE},
-    [TOKEN_OR] = {NULL, NULL, PREC_NONE},
+    [TOKEN_AND] = {NULL, and_, PREC_AND},
+    [TOKEN_OR] = {NULL, or_, PREC_OR},
 
     // control flow 
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
@@ -519,7 +675,7 @@ static ParserRule* getRule (TokenType type) {
 // ========= Parsing expressions =========
 
 static void expression () {
-    parsePrecedence(PREC_ASSIGNMENT);
+    parsePrecedence(PREC_COMMA);
 }
 
 static void statement () {
@@ -529,6 +685,12 @@ static void statement () {
         beginScope();
         blockStatement ();
         endScope();
+    } else if (match(TOKEN_IF)) {
+        ifStatement();
+    } else if (match(TOKEN_WHILE)) {
+        whileStatement();
+    } else if (match(TOKEN_FOR)) {
+        forStatement();
     } else {
         expressionStatement ();
     }

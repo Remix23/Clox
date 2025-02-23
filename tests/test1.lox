@@ -1,6 +1,6 @@
 var i = 11;
 
-for (; i <= 10;) {
+for (;;) {
     print i;
     i = i + 1;
 }

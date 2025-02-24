@@ -54,6 +54,9 @@ typedef enum {
     OP_JUMP,
     OP_JUMP_BACK,
 
+    // func support
+    OP_CALL, // takes as operand one byte: nr of arguments
+
 } OpCode;
 
 typedef struct {

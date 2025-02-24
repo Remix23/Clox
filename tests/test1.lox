@@ -1,8 +1,7 @@
-var i = 11;
 
-for (;;) {
-    print i;
-    i = i + 1;
+
+fun areWeHavingItYet() {
+  print "Yes we are!";
 }
 
-print "out";
+print areWeHavingItYet;

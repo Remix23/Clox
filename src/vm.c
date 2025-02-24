@@ -26,8 +26,10 @@ static void runtimeError (const char* format, ...) {
 
     fputs("\n", stderr);
 
-    size_t instruction = vm.ip - vm.chunk -> code - 1;
-    int line = vm.chunk -> lines[instruction];
+    CallFrame* frame = &vm.frames[vm.frameCount - 1];
+
+    size_t instruction = frame -> ip - frame -> function -> chunk.code - 1;
+    int line = frame->function->chunk.lines[instruction];
 
     fprintf(stderr, "[line %d] in script\n", line);
     resetStack();
@@ -35,6 +37,7 @@ static void runtimeError (const char* format, ...) {
 
 void initVM () {
     vm.objects = NULL;
+    vm.frameCount = 0;
     initHashMap(&vm.strings, 10);
     initHashMap(&vm.globals, 5); 
     resetStack();
@@ -83,9 +86,38 @@ Value pop () {
     return *vm.stackTop;
 }
 
+static bool call(ObjFunction* func, int argCount) {
+    CallFrame* frame = &vm.frames[vm.frameCount++]; // initialize new call frame
+    frame -> function = func;
+    frame -> ip = func -> chunk.code;
+    frame -> slots = vm.stackTop - argCount - 1;
+    return true;
+}
+
+static bool callValue (Value callee, int argCount) {
+    if (IS_OBJ(callee)) {
+        switch (OBJ_TYPE(callee))
+        {
+        case OBJ_FUNCTION:
+                return call(AS_FUNCTION(callee), argCount);
+        
+        default:
+            break; // non callable stuff
+        }
+    }
+    runtimeError("Can only call functions and classes");
+    return false;
+}
+
 static InterpretResult run () {
-    #define READ_BYTE() (*vm.ip++) 
-    #define READ_CONSTANT() (vm.chunk -> constants.values[READ_BYTE()])
+
+    CallFrame* frame = &vm.frames[vm.frameCount - 1];
+
+    #define READ_BYTE() (*frame -> ip++) 
+    #define READ_CONSTANT() (frame -> function -> chunk.constants.values[READ_BYTE()])
+    #define READ_SHORT() \
+        (frame -> ip += 2, \
+        (uint16_t)((frame -> ip[-2] << 8) | frame -> ip[-1]))
     #define READ_STRING() AS_STRING(READ_CONSTANT())
     #define BINARY_OP(valueType, op) \
         do { \
@@ -108,8 +140,8 @@ static InterpretResult run () {
             printf(" ]");
         }
         printf("\n");
-        disassembleInstruction(vm.chunk, \
-            (int)(vm.ip - vm.chunk -> code));
+        disassembleInstruction(&frame -> function -> chunk, \
+            (int)(frame -> ip - frame -> function -> chunk.code));
 #endif     
 
         uint8_t instruction;
@@ -218,20 +250,20 @@ static InterpretResult run () {
 
             case OP_GET_LOCAL: {
                 uint8_t index = READ_BYTE();
-                push(vm.stack[index]);
+                push(frame -> slots[index]);
                 break;
             }
 
             case OP_SET_LOCAL: {
                 uint8_t index = READ_BYTE();
-                vm.stack[index] = peek(0);
+                frame -> slots[index] = peek(0);
                 break;
             }
 
             case OP_JUMP_IF_FALSE: {
                 uint16_t offset = (uint16_t)READ_BYTE() << 8;
                 offset = offset | READ_BYTE();
-                if (isFalsey(peek(0))) vm.ip += offset;
+                if (isFalsey(peek(0))) frame -> ip += offset;
                 break;
             }
 
@@ -239,14 +271,22 @@ static InterpretResult run () {
             {
                 uint16_t offset = (uint16_t)READ_BYTE() << 8;
                 offset = offset | READ_BYTE();
-                vm.ip += offset;
+                frame -> ip += offset;
                 break;
             }
 
             case OP_JUMP_BACK: {
                 uint16_t offset = (uint16_t)READ_BYTE() << 8;
                 offset = offset | READ_BYTE();
-                vm.ip -= offset;
+                frame -> ip -= offset;
+                break;
+            }
+            case OP_CALL: {
+                int argCount = READ_BYTE();
+                if (!callValue(peek(argCount), argCount)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                frame = &vm.frames[vm.frameCount - 1];
                 break;
             }
 
@@ -257,25 +297,19 @@ static InterpretResult run () {
     return INTERPRET_OK;
     
 #undef READ_BYYE
+#undef READ_SHORT
 #undef READ_STRING
 #undef READ_CONSTANT
 }
     
 InterpretResult interpret (const char* source) {
-    Chunk chunk;
+    ObjFunction* func = compile(source);
 
-    initChunk(&chunk);
+    if (func == NULL) return INTERPRET_COMPILE_ERROR;
 
-    if (!compile(source, &chunk)) {
-        freeChunk(&chunk);
-        return INTERPRET_COMPILE_ERROR;
-    }
+    push(OBJ_VAL(func));
 
-    vm.chunk = &chunk;
-    vm.ip = vm.chunk -> code;
+    call(func, 0);
 
-    InterpretResult res = run();
-
-    freeChunk(&chunk);
-    return res;
+    return run ();
 }

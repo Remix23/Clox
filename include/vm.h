@@ -11,13 +11,15 @@
 #define MAX_STACK (MAX_FRAMES * UINT8_COUNT) // grow dynamically?
 
 typedef struct {
+    ObjClosure* closure;
     uint8_t* ip; // the return adress
     Value* slots; // pointer to the first slot in the stack the callframe can use
-    ObjFunction* function;
 } CallFrame;
 typedef struct {
     CallFrame frames [MAX_FRAMES];
     int frameCount;
+
+    ObjUpvalue* openUpvalues;
 
     Value stack[MAX_STACK];
     Value* stackTop;
@@ -25,7 +27,6 @@ typedef struct {
     Obj* objects;
     HashMap globals;
 } VM;
-
 
 
 typedef enum {

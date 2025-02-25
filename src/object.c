@@ -79,6 +79,7 @@ static void printFunction (ObjFunction* func) {
 ObjFunction* newFunction () {
     ObjFunction* func = ALLOCATE_OBJ(ObjFunction, OBJ_FUNCTION);
     func -> arity = 0;
+    func -> upValuesCount = 0;
     func -> name = NULL;
     initChunk(&func -> chunk);
     return func;
@@ -91,6 +92,31 @@ ObjNativeFn* newNative (int arity, NativeFn cfunc) {
     return lfuncs;
 }
 
+ObjClosure* newClosure (ObjFunction* func) {
+
+    ObjUpvalue** upvalues = ALLOCATE(ObjUpvalue*, func -> upValuesCount);
+    
+    for (int i = 0; i < func -> upValuesCount; i++) {
+        upvalues[i] = NULL;
+    }
+
+    ObjClosure* closure = ALLOCATE_OBJ(ObjClosure, OBJ_CLOSURE);
+    closure -> rawFunc = func;
+
+    closure ->upvalueCount = func -> upValuesCount;
+    closure -> upvalues = upvalues;
+    
+    return closure;
+}
+
+ObjUpvalue* newUpvalue (Value* slot) {
+    ObjUpvalue* upvalue = ALLOCATE_OBJ(ObjUpvalue, OBJ_UPVALUE);
+    upvalue ->location = slot;
+    upvalue -> next = NULL;
+    upvalue->closed = NIL_VAL;
+    return upvalue;
+}
+
 void printObject(Value value) {
     switch (OBJ_TYPE(value)) {
         case OBJ_STRING:
@@ -101,6 +127,12 @@ void printObject(Value value) {
             break;
         case OBJ_NATIVE:
             printf("<native fn: %d args>", AS_FUNCTION(value) -> arity);
+            break;
+        case OBJ_CLOSURE:
+            printFunction(AS_CLOSURE(value) -> rawFunc);
+            break;
+        case OBJ_UPVALUE:
+            printf("upvalue");
             break;
     }
 }

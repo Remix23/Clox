@@ -49,6 +49,10 @@ typedef enum {
     OP_SET_LOCAL,
     OP_GET_LOCAL,
 
+    // upvalues - closures
+    OP_GET_UPVALUE,
+    OP_SET_UPVALUE,
+
     // control flow
     OP_JUMP_IF_FALSE,
     OP_JUMP,
@@ -56,7 +60,9 @@ typedef enum {
 
     // func support
     OP_CALL, // takes as operand one byte: nr of arguments
+    OP_CLOSURE,
 
+    OP_CLOSE_CAPTURE,
 } OpCode;
 
 typedef struct {

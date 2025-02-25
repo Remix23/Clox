@@ -84,9 +84,10 @@ ObjFunction* newFunction () {
     return func;
 }
 
-ObjNativeFn* newNative (NativeFn cfunc) {
+ObjNativeFn* newNative (int arity, NativeFn cfunc) {
     ObjNativeFn* lfuncs = ALLOCATE_OBJ(ObjNativeFn, OBJ_NATIVE);
     lfuncs -> func = cfunc;
+    lfuncs -> arity = arity;
     return lfuncs;
 }
 
@@ -99,7 +100,7 @@ void printObject(Value value) {
             printFunction (AS_FUNCTION(value));
             break;
         case OBJ_NATIVE:
-            printf("<native fn>");
+            printf("<native fn: %d args>", AS_FUNCTION(value) -> arity);
             break;
     }
 }

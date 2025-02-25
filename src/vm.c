@@ -108,8 +108,13 @@ static bool callValue (Value callee, int argCount) {
         case OBJ_FUNCTION:
                 return call(AS_FUNCTION(callee), argCount);
         case OBJ_NATIVE: {
-            NativeFn native = AS_NATIVE(callee);
-            Value res = native(argCount, vm.stackTop - argCount);
+            ObjNativeFn* native = AS_NATIVE(callee);
+            if (argCount != native -> arity) {
+                runtimeError("Expected %d arguments but got %d", native -> arity, argCount);
+                return false;
+            }
+
+            Value res = native ->func(argCount, vm.stackTop - argCount);
             vm.stackTop -= argCount + 1;
             push(res);
             return true;
@@ -122,9 +127,9 @@ static bool callValue (Value callee, int argCount) {
     return false;
 }
 
-static void defineNative (const char* name, NativeFn func) {
+static void defineNative (const char* name, NativeFn func, int arity) {
     push(OBJ_VAL(copyString(name, (int)strlen(name))));
-    push(OBJ_VAL(newNative(func)));
+    push(OBJ_VAL(newNative(arity, func)));
     hashMapSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
     pop();
     pop();
@@ -341,7 +346,7 @@ void initVM () {
     initHashMap(&vm.globals, 5); 
     resetStack();
 
-    defineNative("clock", clockNative);
+    defineNative("clock", clockNative, 0);
 }
     
 InterpretResult interpret (const char* source) {

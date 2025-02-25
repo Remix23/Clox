@@ -16,8 +16,8 @@
 
 
 #define AS_FUNCTION(value) ((ObjFunction*)AS_OBJ(value))
-#define AS_NATIVE(value) (((ObjNativeFn*) AS_OBJ(value)) ->func)
-
+#define AS_CFUNCTION(value) (((ObjNativeFn*) AS_OBJ(value)) ->func)
+#define AS_NATIVE(value) ((ObjNativeFn*) AS_OBJ(value))
 typedef enum {
     OBJ_STRING,
     OBJ_FUNCTION,
@@ -47,6 +47,7 @@ typedef Value (*NativeFn) (int argCount, Value* args);
 
 typedef struct {
     Obj obj;
+    int arity;
     NativeFn func;
 } ObjNativeFn;
 
@@ -58,7 +59,7 @@ ObjString* copyString(const char* chars, int lenght);
 ObjString* takeString(char* chars, int lenght);
 
 ObjFunction* newFunction();
-ObjNativeFn* newNative(NativeFn cfunc);
+ObjNativeFn* newNative(int arity, NativeFn cfunc);
 
 void printObject(Value value);
 

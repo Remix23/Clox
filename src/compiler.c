@@ -135,7 +135,6 @@ static void emitBytes (uint8_t b1, uint8_t b2) {
     emitByte(b2);
 }
 
-
 static void emitConstant (Value val) {
     emitBytes(OP_CONSTANT, makeConstant(val));
 }
@@ -189,6 +188,7 @@ static void patchJump (int offset) {
 }
 
 static void emitReturn () {
+    emitByte(OP_NIL);
     emitByte(OP_RETURN);
 }
 static ObjFunction* endCompiler () {
@@ -359,7 +359,7 @@ static uint8_t parseArguments () {
     if (!check(TOKEN_RIGHT_PAREN)) {
         do
         {
-            expression();
+            parsePrecedence(PREC_ASSIGNMENT);
             argCount++;
             if (argCount == 255) {
                 errorAtCurrent("Can't have more than 255 arguments.");
@@ -367,7 +367,7 @@ static uint8_t parseArguments () {
         } while (match(TOKEN_COMMA));
     }
 
-    consume(TOKEN_RIGHT_BRACE, "Expect ')' after paremeter list.");
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after paremeter list.");
     return argCount;
 }
 
@@ -489,7 +489,7 @@ static void unary (bool canAssign) {
 
 static void call (bool canAssign) {
     // '(' is consumed
-    uint8_t n_args = parseArguments ();
+    uint8_t n_args = parseArguments();
     emitBytes(OP_CALL, n_args);
 }
 
@@ -509,9 +509,8 @@ static void ternary (bool canAssign) {
     int else_branch = emitJump(OP_JUMP_IF_FALSE);
 
     // parsing the true expression
-    printf("Parsing ternary expression\n");
     emitByte(OP_POP);
-    expression();
+    parsePrecedence(PREC_ASSIGNMENT);
 
     int exit = emitJump(OP_JUMP);
     patchJump(else_branch);
@@ -521,7 +520,7 @@ static void ternary (bool canAssign) {
     // consume the colon
     consume(TOKEN_COLON, "Expect ':' after then branch");
 
-    expression();
+    parsePrecedence(PREC_ASSIGNMENT);
     patchJump(exit);
 }
 
@@ -676,6 +675,20 @@ static void continueStatement () {
 
 }
 
+static void returnStatement () {
+
+    if (current -> ftype == TYPE_SCRIPT) {
+        errorAtCurrent("Can't have return outside of function body.");
+    }
+    if (match(TOKEN_SEMICOLON)) {
+        emitReturn();
+    } else {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' after the return value.");
+        emitByte(OP_RETURN);
+    }
+}
+
 static void function (FunctionType ftype) {
     Compiler compiler;
     initCompiler(&compiler, ftype);
@@ -727,7 +740,7 @@ static void variable (bool canAssign) {
 // ========= Parsing rules =========
 
 ParserRule rules [] = {
-    [TOKEN_LEFT_PAREN] = {grouping, call, PREC_NONE},
+    [TOKEN_LEFT_PAREN] = {grouping, call, PREC_CALL},
     [TOKEN_RIGHT_PAREN] = {NULL, NULL, PREC_NONE},
     [TOKEN_LEFT_BRACE] = {NULL, NULL, PREC_NONE},
     [TOKEN_RIGHT_BRACE] = {NULL, NULL, PREC_NONE},
@@ -825,6 +838,8 @@ static void statement () {
         continueStatement();
     } else if (match(TOKEN_BREAK)) {
         breakStatement();
+    } else if (match(TOKEN_RETURN)) {
+        returnStatement();
     } else {
         expressionStatement ();
     }

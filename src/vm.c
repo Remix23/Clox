@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "vm.h"
 #include "memory.h"
@@ -12,6 +13,10 @@
 #include "object.h"
 
 VM vm;
+
+static Value clockNative (int argCount, Value* args) {
+    return NUMBER_VAL((double) clock() / CLOCKS_PER_SEC);
+}
 
 static void resetStack () {
     vm.stackTop = vm.stack;
@@ -26,20 +31,17 @@ static void runtimeError (const char* format, ...) {
 
     fputs("\n", stderr);
 
-    CallFrame* frame = &vm.frames[vm.frameCount - 1];
-
-    size_t instruction = frame -> ip - frame -> function -> chunk.code - 1;
-    int line = frame->function->chunk.lines[instruction];
-
-    fprintf(stderr, "[line %d] in script\n", line);
-    resetStack();
-}
-
-void initVM () {
-    vm.objects = NULL;
-    vm.frameCount = 0;
-    initHashMap(&vm.strings, 10);
-    initHashMap(&vm.globals, 5); 
+    for (int i = vm.frameCount - 1; i >= 0; i--) {
+        CallFrame* frame = &vm.frames[i];
+        ObjFunction* func = frame -> function;
+        size_t instruction = frame -> ip - func->chunk.code - 1;
+        fprintf(stderr, "[line %d] in ", func -> chunk.lines[instruction]);
+        if (func->name == NULL) {
+            fprintf(stderr, "script\n");
+        } else {
+            fprintf(stderr, "%s()\n", func -> name ->chars);
+        }
+    }
     resetStack();
 }
 
@@ -70,11 +72,6 @@ void concatenate () {
     push(OBJ_VAL(out_string));
 }
 
-void freeVM () {
-    freeObjects();
-    freeHashMap(&vm.strings);
-    freeHashMap(&vm.globals);
-}
 
 void push (Value value) {
     *vm.stackTop = value;
@@ -87,6 +84,16 @@ Value pop () {
 }
 
 static bool call(ObjFunction* func, int argCount) {
+    if (argCount != func->arity) {
+        runtimeError("Expected %d arguments but got %d", func->arity, argCount);
+        return false;
+    }
+
+    if (vm.frameCount == MAX_FRAMES) {
+        runtimeError("Stack overflow");
+        return false;
+    }
+
     CallFrame* frame = &vm.frames[vm.frameCount++]; // initialize new call frame
     frame -> function = func;
     frame -> ip = func -> chunk.code;
@@ -100,7 +107,13 @@ static bool callValue (Value callee, int argCount) {
         {
         case OBJ_FUNCTION:
                 return call(AS_FUNCTION(callee), argCount);
-        
+        case OBJ_NATIVE: {
+            NativeFn native = AS_NATIVE(callee);
+            Value res = native(argCount, vm.stackTop - argCount);
+            vm.stackTop -= argCount + 1;
+            push(res);
+            return true;
+        }
         default:
             break; // non callable stuff
         }
@@ -109,11 +122,19 @@ static bool callValue (Value callee, int argCount) {
     return false;
 }
 
+static void defineNative (const char* name, NativeFn func) {
+    push(OBJ_VAL(copyString(name, (int)strlen(name))));
+    push(OBJ_VAL(newNative(func)));
+    hashMapSet(&vm.globals, AS_STRING(vm.stack[0]), vm.stack[1]);
+    pop();
+    pop();
+}
+
 static InterpretResult run () {
 
     CallFrame* frame = &vm.frames[vm.frameCount - 1];
 
-    #define READ_BYTE() (*frame -> ip++) 
+    #define READ_BYTE() (*(frame -> ip++)) 
     #define READ_CONSTANT() (frame -> function -> chunk.constants.values[READ_BYTE()])
     #define READ_SHORT() \
         (frame -> ip += 2, \
@@ -150,7 +171,17 @@ static InterpretResult run () {
         {
             case OP_RETURN: {
                 // exit -> to change later with functions and multiple chunks
-                return INTERPRET_OK;
+                vm.frameCount--;
+                Value res = pop();
+                if (vm.frameCount == 0) {
+                    pop();
+                    return INTERPRET_OK;
+                }
+                
+                vm.stackTop = frame->slots;
+                push(res);
+                frame = &vm.frames[vm.frameCount - 1];
+                break;
             }
             case OP_CONSTANT:
             {
@@ -283,6 +314,7 @@ static InterpretResult run () {
             }
             case OP_CALL: {
                 int argCount = READ_BYTE();
+                
                 if (!callValue(peek(argCount), argCount)) {
                     return INTERPRET_RUNTIME_ERROR;
                 }
@@ -301,6 +333,16 @@ static InterpretResult run () {
 #undef READ_STRING
 #undef READ_CONSTANT
 }
+
+void initVM () {
+    vm.objects = NULL;
+    vm.frameCount = 0;
+    initHashMap(&vm.strings, 10);
+    initHashMap(&vm.globals, 5); 
+    resetStack();
+
+    defineNative("clock", clockNative);
+}
     
 InterpretResult interpret (const char* source) {
     ObjFunction* func = compile(source);
@@ -312,4 +354,11 @@ InterpretResult interpret (const char* source) {
     call(func, 0);
 
     return run ();
+}
+
+
+void freeVM () {
+    freeObjects();
+    freeHashMap(&vm.strings);
+    freeHashMap(&vm.globals);
 }

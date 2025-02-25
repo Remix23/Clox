@@ -30,6 +30,10 @@ static void freeObject (Obj* obj) {
         FREE(ObjFunction, func);
         break;
     }
+    case OBJ_NATIVE: {
+        FREE(ObjNativeFn, obj);
+        break;
+    }
 
     default:
         break;

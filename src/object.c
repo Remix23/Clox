@@ -84,6 +84,12 @@ ObjFunction* newFunction () {
     return func;
 }
 
+ObjNativeFn* newNative (NativeFn cfunc) {
+    ObjNativeFn* lfuncs = ALLOCATE_OBJ(ObjNativeFn, OBJ_NATIVE);
+    lfuncs -> func = cfunc;
+    return lfuncs;
+}
+
 void printObject(Value value) {
     switch (OBJ_TYPE(value)) {
         case OBJ_STRING:
@@ -91,6 +97,9 @@ void printObject(Value value) {
             break;
         case OBJ_FUNCTION:
             printFunction (AS_FUNCTION(value));
+            break;
+        case OBJ_NATIVE:
+            printf("<native fn>");
             break;
     }
 }

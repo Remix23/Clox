@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "chunk.h"
+#include "hashmap.h"
 #include "value.h"
 
 #include <stdbool.h>
@@ -14,6 +15,8 @@
 #define IS_NATIVE(value) isObjType(value, OBJ_NATIVE)
 #define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
 #define IS_UPVALUE(value) isObjType(value, OBJ_UPVALUE)
+#define IS_CLASS(value) isObjType(value, OBJ_CLASS)
+#define IS_ISTANCE(value) isObjType(value, OBJ_INSTANCE)
 
 #define AS_STRING(value) ((ObjString*)AS_OBJ(value))
 #define AS_CSTRING(value) (((ObjString*)AS_OBJ(value)) -> chars)
@@ -25,12 +28,18 @@
 #define AS_CLOSURE(value) ((ObjClosure*) AS_OBJ(value))
 
 #define AS_UPVALUE(value) ((ObjUpvalue*) AS_OBJ(value))
+
+#define AS_CLASS(value) ((ObjClass*) AS_OBJ(value))
+
+#define AS_INSTANCE(value) ((ObjInstance*) AS_OBJ(value))
 typedef enum {
     OBJ_STRING,
     OBJ_FUNCTION,
     OBJ_NATIVE,
     OBJ_CLOSURE,
     OBJ_UPVALUE,
+    OBJ_CLASS,
+    OBJ_INSTANCE,
 } ObjType;
 
 struct Obj {
@@ -68,6 +77,16 @@ typedef struct {
     int upvalueCount;
 } ObjClosure;
 
+typedef struct {
+    Obj obj;
+    ObjString* name;
+} ObjClass;
+
+typedef struct {
+    Obj* obj;
+    ObjClass* clas;
+    HashMap fields;
+} ObjInstance;
 
 typedef Value (*NativeFn) (int argCount, Value* args);
 
@@ -89,6 +108,9 @@ ObjNativeFn* newNative(int arity, NativeFn cfunc);
 ObjClosure* newClosure(ObjFunction* func);
 
 ObjUpvalue* newUpvalue (Value* slot);
+
+ObjClass* newCLass (ObjString* name);
+ObjInstance* newInstance (ObjClass* clas);
 
 void printObject(Value value);
 

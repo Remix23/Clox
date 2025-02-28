@@ -124,6 +124,11 @@ static bool callValue (Value callee, int argCount) {
             push(res);
             return true;
         }
+        case OBJ_CLASS: {
+            ObjClass* clas = AS_CLASS(callee);
+            vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(clas));
+            return true;
+        }
         default:
             break; // non callable stuff
         }
@@ -401,6 +406,46 @@ static InterpretResult run () {
             case OP_SET_UPVALUE: {
                 uint8_t slot = READ_BYTE();
                 *frame ->closure->upvalues[slot]->location = peek(0);
+                break;
+            }
+
+            case OP_CLASS: {
+                ObjString* name = READ_STRING();
+                push(OBJ_VAL(newCLass(name)));
+                break;
+            }
+            case OP_GET_PROPERTY: {
+
+                if (!IS_ISTANCE(peek(0))) {
+                    runtimeError("Only instances have properties.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                ObjInstance* instance = AS_INSTANCE(peek(0));
+                ObjString* name = READ_STRING();
+
+                Value value;
+                if (hashMapGet(&instance->fields, name, &value)) {
+                    pop();
+                    push(value);
+                    break;
+                }
+
+                runtimeError("Undefined property: '%s'", name->chars);
+                return INTERPRET_RUNTIME_ERROR;
+            }
+            case OP_SET_PROPERTY: {
+                if (!IS_ISTANCE(peek(1))) {
+                    runtimeError("Only instance have field.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                ObjInstance* instance = AS_INSTANCE(peek(1));
+                ObjString* name = READ_STRING();
+                hashMapSet(&instance->fields, name, peek(0));
+                Value val = pop();
+                pop();
+                push(val);
                 break;
             }
 

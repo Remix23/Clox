@@ -4,7 +4,7 @@
 #define INITIAL_CAPACITY 8
 
 #include <stdbool.h>
-#include "object.h"
+#include "value.h"
 
 typedef struct {
     ObjString* key;
@@ -15,7 +15,6 @@ typedef struct {
     int capacity;
     int count;
     Entry* entries;
-
 } HashMap;
 
 void initHashMap(HashMap* map, int init_size);

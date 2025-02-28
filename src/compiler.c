@@ -543,6 +543,18 @@ static void call (bool canAssign) {
     emitBytes(OP_CALL, n_args);
 }
 
+static void dot (bool canAssign) {
+    consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
+    uint8_t name = identifierConstant(&parser.previous);
+
+    if (canAssign && match(TOKEN_EQUAL)) {
+        expression();
+        emitBytes(OP_SET_PROPERTY, name);
+    } else {
+        emitBytes(OP_GET_PROPERTY, name);
+    }
+}
+
 static void literal (bool canAssign) {
     switch (parser.previous.ttype) {
         case TOKEN_FALSE: emitByte(OP_FALSE); break;
@@ -764,7 +776,7 @@ static void function (FunctionType ftype) {
 
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after function name.");
 
-    consume(TOKEN_LEFT_BRACE, "Expect '{' after paremeter list.");
+    consume(TOKEN_LEFT_BRACE, "Expect '{' after parameter list.");
 
     blockStatement(); // consumes the trailing bracket
 
@@ -807,7 +819,7 @@ ParserRule rules [] = {
 
     // colons and dots
     [TOKEN_COMMA] = {NULL, comma, PREC_COMMA},
-    [TOKEN_DOT] = {NULL, NULL, PREC_NONE},
+    [TOKEN_DOT] = {NULL, dot, PREC_CALL},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_COLON] = {NULL, NULL, PREC_NONE},
     
@@ -931,11 +943,28 @@ static void funDeclaration () {
     defineVariable(global);
 }
 
+static void classDeclaration () {
+    // current at the identifier
+    consume(TOKEN_IDENTIFIER, "Expect a class name.");
+    uint8_t nameConstant = identifierConstant(&parser.previous);
+    declareVariable();
+
+    emitBytes(OP_CLASS, nameConstant);
+    defineVariable(nameConstant);
+
+    consume(TOKEN_LEFT_BRACE, "Expect '{' after the class name.");
+
+
+
+    consume(TOKEN_RIGHT_BRACE, "Expect '}' after a the class declaration.");
+}
+
 static void declaration () {
 
     switch (peek()) {
         case TOKEN_VAR: advance(); varDeclaration (); break;
         case TOKEN_FUN: advance(); funDeclaration (); break;
+        case TOKEN_CLASS: advance(); classDeclaration (); break;
 
         default:
             statement();

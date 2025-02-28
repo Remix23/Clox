@@ -124,6 +124,19 @@ ObjUpvalue* newUpvalue (Value* slot) {
     return upvalue;
 }
 
+ObjClass* newCLass (ObjString* name) {
+    ObjClass* clas = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
+    clas ->name = name;
+    return clas;
+}
+
+ObjInstance* newInstance (ObjClass* clas) {
+    ObjInstance* instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE);
+    instance->clas = clas;
+    initHashMap(&instance->fields, 0);
+    return instance;
+}
+
 void printObject(Value value) {
     switch (OBJ_TYPE(value)) {
         case OBJ_STRING:
@@ -140,6 +153,12 @@ void printObject(Value value) {
             break;
         case OBJ_UPVALUE:
             printf("upvalue");
+            break;
+        case OBJ_CLASS:
+            printf("<class: %s>", AS_CLASS(value)->name->chars);
+            break;
+        case OBJ_INSTANCE:
+            printf("<instance of class: %s>", AS_INSTANCE(value)->clas->name->chars);
             break;
     }
 }

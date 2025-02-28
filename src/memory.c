@@ -67,6 +67,18 @@ static void freeObject (Obj* obj) {
         break;
     }
 
+    case OBJ_CLASS: {
+        // ObjClass* clas = (ObjClass*) obj;
+        FREE(ObjClass, obj);
+        break;
+    }
+    case OBJ_INSTANCE: {
+        ObjInstance* instance = (ObjInstance*) obj;
+        freeHashMap(&instance->fields);
+        FREE(ObjInstance, obj);
+        break;
+    }
+
     default:
         break;
     }
@@ -158,6 +170,17 @@ static void blackenObject (Obj* obj) {
         for (int i = 0; i < closure->upvalueCount; i++) {
             markObject((Obj*)closure->upvalues[i]);
         }
+        break;
+    }
+    case OBJ_CLASS: {
+        ObjClass* clas = (ObjClass*) obj;
+        markObject((Obj*) clas->name);
+        break;
+    }
+    case OBJ_INSTANCE: {
+        ObjInstance* instance = (ObjInstance*) obj;
+        markHashMap(&instance->fields);
+        markObject((Obj*) instance->clas);
         break;
     }
     default:

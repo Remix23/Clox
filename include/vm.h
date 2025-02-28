@@ -26,6 +26,14 @@ typedef struct {
     HashMap strings; // interned strings
     Obj* objects;
     HashMap globals;
+
+    // GC stuff
+    int grayCount;
+    int grayCapacity;
+    Obj** grayStack;
+
+    size_t bytesAlocated;
+    size_t nextGC;
 } VM;
 
 

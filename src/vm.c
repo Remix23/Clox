@@ -60,8 +60,8 @@ static bool isFalsey (Value value) {
 }
 
 void concatenate () {
-    ObjString* b = AS_STRING(pop());
-    ObjString* a = AS_STRING(pop());
+    ObjString* b = AS_STRING(peek(0));
+    ObjString* a = AS_STRING(peek(1));
 
     int out_length = a ->length + b -> length;
 
@@ -71,6 +71,9 @@ void concatenate () {
     out[out_length] = '\0';
 
     ObjString* out_string = takeString(out, out_length);
+
+    pop();
+    pop();
     push(OBJ_VAL(out_string));
 }
 
@@ -416,6 +419,13 @@ static InterpretResult run () {
 void initVM () {
     vm.objects = NULL;
 
+    vm.grayCapacity = 0;
+    vm.grayCount = 0;
+    vm.grayStack = NULL;
+
+    vm.bytesAlocated = 0;
+    vm.nextGC = 1024 * 1024;
+
     initHashMap(&vm.strings, 10);
     initHashMap(&vm.globals, 5); 
     resetStack();
@@ -442,4 +452,6 @@ void freeVM () {
     freeObjects();
     freeHashMap(&vm.strings);
     freeHashMap(&vm.globals);
+
+    free(vm.grayStack);
 }

@@ -5,6 +5,8 @@
 #include "chunk.h"
 #include "value.h"
 
+#include <stdbool.h>
+
 #define OBJ_TYPE(value) (AS_OBJ(value) -> otype)
 
 #define IS_FUNCTION(value) isObjType(value, OBJ_FUNCTION)
@@ -33,6 +35,7 @@ typedef enum {
 
 struct Obj {
     ObjType otype;
+    bool isMarked;
     struct Obj* next; // linked list for the vm to clean up
 };
 

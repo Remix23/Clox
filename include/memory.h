@@ -20,7 +20,17 @@
 #define FREE(type, pointer) \
     reallocate(pointer, sizeof(type), 0)
 
+#ifdef DEBUG_LOG_GC
+
+#include <stdio.h>
+#include "debug.h"
+#endif
+
 void* reallocate (void* pointer, size_t oldSize, size_t newSize);
 void freeObjects();
+
+void collectGarbage();
+void markValue (Value value);
+void markObject (Obj* obj);
 
 #endif

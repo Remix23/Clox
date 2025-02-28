@@ -1,6 +1,6 @@
 hearder := ./include
 
-CFLAGS := -I $(hearder) -std=c99 -Wall -fsanitize=address
+CFLAGS := -I $(hearder) -std=c99 -Wall -Werror -fsanitize=address
 
 SRC := $(shell find src -maxdepth 1 -name "*.c")
 HEADERS = $(shell find include -maxdepth 1 -name "*.h")

@@ -26,6 +26,8 @@ bool hashMapSet (HashMap* map, ObjString* key, Value value);
 bool hashMapGet (HashMap* map, ObjString* key, Value* val);
 bool hashMapDelete (HashMap* map, ObjString* key);
 void hashMapAddAll (HashMap* from, HashMap* to);
+void markHashMap (HashMap* map);
+void hashMapRemoveWhite (HashMap* map);
 
 ObjString* hashMapFindString (HashMap* map, const char* chars, int length, uint32_t hash);
 

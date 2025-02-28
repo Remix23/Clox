@@ -22,9 +22,14 @@ static uint32_t hashString(const char* key, int length) {
 static Obj* allocateObject(size_t size, ObjType otype) {
     Obj* object = (Obj*)reallocate(NULL, 0, size);
     object->otype = otype; 
+    object->isMarked = false;
 
     object->next = vm.objects;
     vm.objects = object;
+
+#ifdef DEBUG_LOG_GC
+    printf("%p allocate %zu for %d\n", (void*) object, size, otype);
+#endif
 
     return object;
 }
@@ -36,7 +41,9 @@ static ObjString* allocateString(char* chars, int length, uint32_t hash) {
     string -> chars = chars;
     string -> hash = hash;
 
+    push(OBJ_VAL(string));
     hashMapSet(&vm.strings, string, NIL_VAL);
+    pop();
     return string;
 }
 

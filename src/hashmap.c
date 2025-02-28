@@ -140,6 +140,23 @@ ObjString* hashMapFindString (HashMap* map, const char* chars, int lenght, uint3
     }
 }
 
+void markHashMap (HashMap* map) {
+    for (int i = 0; i < map->capacity; i++) {
+        Entry* entry = &map->entries[i];
+        markObject((void*) entry->key);
+        markValue(entry->value);
+    }
+}
+
+void hashMapRemoveWhite (HashMap* map) {
+    for (int i = 0; i < map->capacity; i ++) {
+        Entry* entry = &map->entries[i];
+        if (entry->key != NULL && !entry->key->obj.isMarked) {
+            hashMapDelete(map, entry->key);
+        }
+    }
+}
+
 void freeHashMap (HashMap* map) {
     if (map->entries != NULL)
         free(map->entries);

@@ -127,6 +127,7 @@ ObjUpvalue* newUpvalue (Value* slot) {
 ObjClass* newCLass (ObjString* name) {
     ObjClass* clas = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
     clas ->name = name;
+    initHashMap(&clas->methods, 0);
     return clas;
 }
 
@@ -135,6 +136,13 @@ ObjInstance* newInstance (ObjClass* clas) {
     instance->clas = clas;
     initHashMap(&instance->fields, 0);
     return instance;
+}
+
+ObjBoundMethod* newBoundMethod (Value receiver, ObjClosure* method) {
+    ObjBoundMethod* boundMethod = ALLOCATE_OBJ(ObjBoundMethod, OBJ_BOUND_METHOD);
+    boundMethod->receiver = receiver;
+    boundMethod->method = method;
+    return boundMethod;
 }
 
 void printObject(Value value) {
@@ -160,5 +168,8 @@ void printObject(Value value) {
         case OBJ_INSTANCE:
             printf("<instance of class: %s>", AS_INSTANCE(value)->clas->name->chars);
             break;
+        case OBJ_BOUND_METHOD: {
+            printFunction(AS_BOUNDMETHOD(value)->method -> rawFunc);
+        }
     }
 }

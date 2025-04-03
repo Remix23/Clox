@@ -68,7 +68,8 @@ static void freeObject (Obj* obj) {
     }
 
     case OBJ_CLASS: {
-        // ObjClass* clas = (ObjClass*) obj;
+        ObjClass* clas = (ObjClass*) obj;
+        freeHashMap(&clas->methods);
         FREE(ObjClass, obj);
         break;
     }
@@ -78,7 +79,11 @@ static void freeObject (Obj* obj) {
         FREE(ObjInstance, obj);
         break;
     }
-
+    case OBJ_BOUND_METHOD: {
+        FREE(ObjBoundMethod, obj);
+        break;
+    }
+    
     default:
         break;
     }
@@ -175,12 +180,19 @@ static void blackenObject (Obj* obj) {
     case OBJ_CLASS: {
         ObjClass* clas = (ObjClass*) obj;
         markObject((Obj*) clas->name);
+        markHashMap(&clas->methods);
         break;
     }
     case OBJ_INSTANCE: {
         ObjInstance* instance = (ObjInstance*) obj;
         markHashMap(&instance->fields);
         markObject((Obj*) instance->clas);
+        break;
+    }
+    case OBJ_BOUND_METHOD: {
+        ObjBoundMethod* boundMethod = (ObjBoundMethod*) obj;
+        markValue(boundMethod->receiver);
+        markObject((Obj*) boundMethod->method);
         break;
     }
     default:

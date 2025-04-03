@@ -5,7 +5,7 @@
 ### VM:
 
 - [ ] More efficient line encoding (ch: 14)
-- [ ]Allow support for more constants than 256 (add OP_CONSTANT_LONG)
+- [ ] Allow support for more constants than 256 (add OP_CONSTANT_LONG)
 - [ ] String interpolation as in python: f string with f" {} "
 - [ ] Implement reallocate without the std malloc, realloc, free
 - [ ] Dynamically resized stack

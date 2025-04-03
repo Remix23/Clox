@@ -1,3 +1,11 @@
-class Toast {}
-var toast = Toast();
-print toast.jam = "grape"; // Prints "grape".
+class Nested {
+  method() {
+    fun function() {
+      print this;
+    }
+
+    function();
+  }
+}
+
+Nested().method();

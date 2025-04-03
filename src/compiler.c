@@ -60,6 +60,7 @@ typedef struct {
 typedef enum {
     TYPE_FUNCTION,
     TYPE_SCRIPT,
+    TYPE_METHOD,
 } FunctionType;
  
 typedef struct Compiler {
@@ -75,8 +76,13 @@ typedef struct Compiler {
     Upvalue upValues [UINT8_COUNT];
 } Compiler;
 
+typedef struct ClassCompiler {
+    struct ClassCompiler* enclosing;
+} ClassCompiler;
+
 Parser parser;
 Compiler* current = NULL;
+ClassCompiler* currentClass = NULL;
 Chunk* compilingChunk;
 
 // ========= Parsing Declarations =========
@@ -231,9 +237,15 @@ static void initCompiler (Compiler* compiler, FunctionType ftype) {
     }
 
     Local* local = &current -> locals[current -> localCount++];
-    local -> name.start = ""; // reserved in the VM stack for the first call frame (aka the main function)
-    local -> name.length = 0;
     local->isCaptured = false;
+
+    if (ftype != TYPE_FUNCTION) {
+        local -> name.start = "this"; // reserved in the VM stack for the first call frame (aka the main function)
+        local -> name.length = 4;
+    } else {
+        local->name.start = "";
+        local->name.length = 0;
+    }
 }
 
 static void advance () {
@@ -790,6 +802,16 @@ static void function (FunctionType ftype) {
     }
 }
 
+static void method () {
+    consume(TOKEN_IDENTIFIER, "Expect method name.");
+    uint8_t index = identifierConstant(&parser.previous);
+
+    FunctionType ftype = TYPE_METHOD;
+    function(ftype);
+
+    emitBytes(OP_METHOD, index);
+}
+
 static void expressionStatement () {
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after expression");
@@ -807,6 +829,16 @@ static uint8_t parseVariable (const char* msg) {
 
 static void variable (bool canAssign) {
     namedVariable(parser.previous, canAssign);
+}
+
+static void this_ (bool canAssign) {
+
+    if (currentClass == NULL) {
+        errorAtCurrent("Can't use 'this' outside of a class");
+        return;
+    }
+
+    variable(false);
 }
 
 // ========= Parsing rules =========
@@ -871,7 +903,7 @@ ParserRule rules [] = {
     // declatations
     [TOKEN_CLASS] = {NULL, NULL, PREC_NONE},
     [TOKEN_SUPER] = {NULL, NULL, PREC_NONE},
-    [TOKEN_THIS] = {NULL, NULL, PREC_NONE},
+    [TOKEN_THIS] = {this_, NULL, PREC_NONE},
 
     [TOKEN_FUN] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
@@ -944,19 +976,34 @@ static void funDeclaration () {
 }
 
 static void classDeclaration () {
+
+    // push the new class on the compiler
+
     // current at the identifier
     consume(TOKEN_IDENTIFIER, "Expect a class name.");
+    Token className = parser.previous;
     uint8_t nameConstant = identifierConstant(&parser.previous);
     declareVariable();
 
     emitBytes(OP_CLASS, nameConstant);
     defineVariable(nameConstant);
 
+    ClassCompiler classCompiler;
+    classCompiler.enclosing = currentClass;
+    currentClass = &classCompiler;
+
     consume(TOKEN_LEFT_BRACE, "Expect '{' after the class name.");
 
-
-
+    namedVariable(className, false);
+    while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
+    {
+        method();
+    }
+    
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after a the class declaration.");
+    emitByte(OP_POP);
+
+    currentClass = currentClass->enclosing;
 }
 
 static void declaration () {

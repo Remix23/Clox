@@ -110,6 +110,11 @@ static bool callValue (Value callee, int argCount) {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee))
         {
+        case OBJ_BOUND_METHOD: {
+            ObjBoundMethod* bound = AS_BOUNDMETHOD(callee);
+            vm.stackTop[-argCount - 1] = bound->receiver;
+            return call(bound->method, argCount);
+        }
         case OBJ_CLOSURE:
                 return call(AS_CLOSURE(callee), argCount);
         case OBJ_NATIVE: {
@@ -176,6 +181,27 @@ static void closeUpvalues (Value* last) {
             upvalue->location = &upvalue -> closed;
             vm.openUpvalues = upvalue->next;
     }
+}
+
+static void defineMethod (ObjString* name) {
+    Value method = peek(0);
+    ObjClass* clas = AS_CLASS(peek(1));
+    hashMapSet(&clas->methods, name, method);
+    pop();
+}
+
+static bool bindMethod (ObjClass* clas, ObjString* name) {
+    Value method;
+    if (!hashMapGet(&clas->methods, name, &method)) {
+        runtimeError("Undefined property %s", name->chars);
+        return false;
+    }
+
+    ObjBoundMethod* bound = newBoundMethod(peek(0), AS_CLOSURE(method));
+
+    pop();
+    push(OBJ_VAL(bound));
+    return true;
 }
 
 static InterpretResult run () {
@@ -431,8 +457,10 @@ static InterpretResult run () {
                     break;
                 }
 
-                runtimeError("Undefined property: '%s'", name->chars);
-                return INTERPRET_RUNTIME_ERROR;
+                if (!bindMethod(instance->clas, name)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
             }
             case OP_SET_PROPERTY: {
                 if (!IS_ISTANCE(peek(1))) {
@@ -448,6 +476,9 @@ static InterpretResult run () {
                 push(val);
                 break;
             }
+            case OP_METHOD:
+                defineMethod (READ_STRING());
+                break;
 
             default:
             break;

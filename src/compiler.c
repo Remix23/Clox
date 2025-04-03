@@ -1,3 +1,5 @@
+#include <math.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
@@ -61,8 +63,9 @@ typedef enum {
     TYPE_FUNCTION,
     TYPE_SCRIPT,
     TYPE_METHOD,
+    TYPE_INITIALIZER,
 } FunctionType;
- 
+
 typedef struct Compiler {
     struct Compiler* enclosing;
 
@@ -104,7 +107,7 @@ static void parsePrecedence (Precedence precedence);
 static void errorAt (Token* token, const char* msg) {
     // suppress any further errors msgs
     if (parser.panicMode) return;
-    
+
     parser.panicMode = true;
     fprintf(stderr, "[line %d] Error", token->line);
 
@@ -184,7 +187,7 @@ static void emitJumpBack (int start) {
     uint8_t b2 = jump & 0xff;
 
     emitBytes(b1, b2);
-} 
+}
 
 static void patchJump (int offset) {
     // size of the chunk after parsing statements
@@ -203,7 +206,11 @@ static void patchJump (int offset) {
 }
 
 static void emitReturn () {
-    emitByte(OP_NIL);
+    if (current -> ftype == TYPE_INITIALIZER) {
+        emitBytes(OP_GET_LOCAL, 0);
+    } else {
+        emitByte(OP_NIL);
+    }
     emitByte(OP_RETURN);
 }
 static ObjFunction* endCompiler () {
@@ -211,12 +218,12 @@ static ObjFunction* endCompiler () {
 
     ObjFunction* func = current -> function;
 
-    #ifdef DEBUG_PRINT_CODE 
+    #ifdef DEBUG_PRINT_CODE
     if (!parser.hadError) {
         disassembleChunk(currentChunk(), func -> name != NULL ? func -> name -> chars : "<script>");
     }
 #endif
-    
+
     current = current -> enclosing;
     return func;
 }
@@ -225,7 +232,7 @@ static void initCompiler (Compiler* compiler, FunctionType ftype) {
     compiler -> enclosing = current;
     compiler -> function = NULL;
     compiler -> ftype = ftype;
-    
+
     compiler -> localCount = 0;
     compiler -> scopeDepth = 0;
 
@@ -270,7 +277,7 @@ static void consume (TokenType type, const char* msg) {
 
 static bool check (TokenType expected) {
     return parser.current.ttype == expected;
-} 
+}
 
 static bool match (TokenType expected) {
     if (!check(expected))  return false;
@@ -355,7 +362,7 @@ static int resolveUpvalue (Compiler* compiler, Token* name) {
     }
 
     int upValue = resolveUpvalue(compiler -> enclosing, name);
-    if (upValue != -1) 
+    if (upValue != -1)
         return addUpvalue(compiler, (uint8_t) upValue, false);
 
     return -1;
@@ -377,7 +384,7 @@ static void declareVariable () {
             errorAtCurrent("Variable with this name already declared in this scope");
         }
     }
-    
+
     addLocal(*name);
 }
 
@@ -479,13 +486,13 @@ static void binary (bool canAssign) {
 
         case TOKEN_EQUAL_EQUAL: emitByte(OP_EQUAL); break;
         case TOKEN_BANG_EQUAL: emitByte(OP_EQUAL); emitByte(OP_NOT); break;
-        
+
         case TOKEN_LESS: emitByte(OP_LESS); break;
         case TOKEN_LESS_EQUAL: emitByte(OP_GREATER); emitByte(OP_NOT); break;
 
         case TOKEN_GREATER: emitByte(OP_GREATER); break;
         case TOKEN_GREATER_EQUAL: emitByte(OP_LESS); emitByte(OP_NOT); break;
-        
+
         default: // unreachable
             return;
     }
@@ -496,9 +503,9 @@ static void and_ (bool canAssign) {
     // exp1 && exp2 -> if exp1 is false jump after expr2
 
     int and_off = emitJump(OP_JUMP_IF_FALSE);
-    emitByte(OP_POP); // pop result of epxr1 
+    emitByte(OP_POP); // pop result of epxr1
     parsePrecedence(PREC_AND); // expr2
-    
+
     // expr2 left on stack (since expr1 is true the result of and it equal to expr2)
 
     patchJump(and_off);
@@ -543,7 +550,7 @@ static void unary (bool canAssign) {
     {
     case TOKEN_MINUS: emitByte(OP_NEGATE); break;
     case TOKEN_BANG: emitByte(OP_NOT); break;
-    
+
     default:
         break;
     }
@@ -562,6 +569,10 @@ static void dot (bool canAssign) {
     if (canAssign && match(TOKEN_EQUAL)) {
         expression();
         emitBytes(OP_SET_PROPERTY, name);
+    } else if (match(TOKEN_LEFT_PAREN)) {
+        uint8_t argcount = parseArguments();
+        emitBytes(OP_INVOKE, name);
+        emitByte(argcount);
     } else {
         emitBytes(OP_GET_PROPERTY, name);
     }
@@ -761,6 +772,9 @@ static void returnStatement () {
     if (match(TOKEN_SEMICOLON)) {
         emitReturn();
     } else {
+        if (current -> ftype == TYPE_INITIALIZER) {
+            errorAtCurrent("Can't return value from a initializer.");
+        }
         expression();
         consume(TOKEN_SEMICOLON, "Expect ';' after the return value.");
         emitByte(OP_RETURN);
@@ -783,7 +797,7 @@ static void function (FunctionType ftype) {
             }
             uint8_t constant = parseVariable("Expect parameter name.");
             defineVariable(constant);
-        } while (match(TOKEN_COMMA));   
+        } while (match(TOKEN_COMMA));
     }
 
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after function name.");
@@ -807,6 +821,9 @@ static void method () {
     uint8_t index = identifierConstant(&parser.previous);
 
     FunctionType ftype = TYPE_METHOD;
+    if (parser.previous.length == 4 && memcmp(parser.previous.start, "init", 4) == 0) {
+        ftype = TYPE_INITIALIZER;
+    }
     function(ftype);
 
     emitBytes(OP_METHOD, index);
@@ -815,7 +832,7 @@ static void method () {
 static void expressionStatement () {
     expression();
     consume(TOKEN_SEMICOLON, "Expect ';' after expression");
-    emitByte(OP_POP); // to return the stack to its original state 
+    emitByte(OP_POP); // to return the stack to its original state
 }
 
 static uint8_t parseVariable (const char* msg) {
@@ -854,7 +871,7 @@ ParserRule rules [] = {
     [TOKEN_DOT] = {NULL, dot, PREC_CALL},
     [TOKEN_SEMICOLON] = {NULL, NULL, PREC_NONE},
     [TOKEN_COLON] = {NULL, NULL, PREC_NONE},
-    
+
     // add question mark - ternany operator
     [TOKEN_QUESTION_MARK] = {NULL, ternary, PREC_ASSIGNMENT},
 
@@ -875,7 +892,7 @@ ParserRule rules [] = {
     [TOKEN_LESS_EQUAL] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_GREATER] = {NULL, binary, PREC_COMPARISON},
     [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_COMPARISON},
-    
+
     // literals
     [TOKEN_IDENTIFIER] = {variable, NULL, PREC_NONE},
     [TOKEN_STRING] = {string, NULL, PREC_NONE},
@@ -885,13 +902,13 @@ ParserRule rules [] = {
     [TOKEN_FALSE] = {literal, NULL, PREC_NONE},
     [TOKEN_TRUE] = {literal, NULL, PREC_NONE},
     [TOKEN_NIL] = {literal, NULL, PREC_NONE},
-    
+
     // binary operands
     [TOKEN_BANG] = {unary, NULL, PREC_NONE},
     [TOKEN_AND] = {NULL, and_, PREC_AND},
     [TOKEN_OR] = {NULL, or_, PREC_OR},
 
-    // control flow 
+    // control flow
     [TOKEN_FOR] = {NULL, NULL, PREC_NONE},
     [TOKEN_WHILE] = {NULL, NULL, PREC_NONE},
     [TOKEN_IF] = {NULL, NULL, PREC_NONE},
@@ -908,7 +925,7 @@ ParserRule rules [] = {
     [TOKEN_FUN] = {NULL, NULL, PREC_NONE},
     [TOKEN_RETURN] = {NULL, NULL, PREC_NONE},
 
-    // print 
+    // print
     [TOKEN_PRINT] = {NULL, NULL, PREC_NONE},
 
     [TOKEN_ERROR] = {NULL, NULL, PREC_NONE},
@@ -961,7 +978,7 @@ static void varDeclaration () {
     } else {
         emitByte(OP_NIL);
     }
-    
+
     consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration");
 
     defineVariable(global);
@@ -988,18 +1005,18 @@ static void classDeclaration () {
     emitBytes(OP_CLASS, nameConstant);
     defineVariable(nameConstant);
 
+    namedVariable(className, false);
+
     ClassCompiler classCompiler;
     classCompiler.enclosing = currentClass;
     currentClass = &classCompiler;
 
     consume(TOKEN_LEFT_BRACE, "Expect '{' after the class name.");
-
-    namedVariable(className, false);
     while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF))
     {
         method();
     }
-    
+
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after a the class declaration.");
     emitByte(OP_POP);
 
@@ -1017,7 +1034,7 @@ static void declaration () {
             statement();
             break;
     }
-    
+
     // synchronize
     if (parser.panicMode) synchonize ();
 }
@@ -1061,9 +1078,9 @@ ObjFunction* compile (const char* source) {
     parser.hadError = false;
     parser.panicMode = false;
 
-    advance();   
+    advance();
 
-    // program -> seqeunce of statements 
+    // program -> seqeunce of statements
     while (!match(TOKEN_EOF)) {
         declaration();
     }

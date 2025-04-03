@@ -4,6 +4,8 @@
 #include <string.h>
 #include <time.h>
 
+#include "chunk.h"
+#include "hashmap.h"
 #include "vm.h"
 #include "memory.h"
 #include "common.h"
@@ -132,6 +134,13 @@ static bool callValue (Value callee, int argCount) {
         case OBJ_CLASS: {
             ObjClass* clas = AS_CLASS(callee);
             vm.stackTop[-argCount - 1] = OBJ_VAL(newInstance(clas));
+            Value initializer;
+            if (hashMapGet(&clas->methods, vm.initString, &initializer)) {
+                return call(AS_CLOSURE(initializer), argCount);
+            } else if (argCount > 0) {
+                runtimeError("Expected 0 arguments but got %d", argCount);
+                return false;
+            }
             return true;
         }
         default:
@@ -174,7 +183,7 @@ static ObjUpvalue* captureUpvalue (Value* local) {
 }
 
 static void closeUpvalues (Value* last) {
-    while (vm.openUpvalues != NULL && 
+    while (vm.openUpvalues != NULL &&
         vm.openUpvalues -> location >= last) {
             ObjUpvalue* upvalue = vm.openUpvalues;
             upvalue -> closed = *upvalue->location;
@@ -204,11 +213,39 @@ static bool bindMethod (ObjClass* clas, ObjString* name) {
     return true;
 }
 
+static bool invokeFromClass (ObjClass* clas, ObjString* name, int argcount) {
+    Value method;
+    if (!hashMapGet(&clas->methods, name, &method)) {
+        runtimeError("Only instances have methods.");
+        return false;
+    }
+    return call(AS_CLOSURE(method), argcount);
+}
+
+static bool invoke (ObjString* name, int argCount) {
+    Value receiver = peek(argCount);
+
+    if (!IS_INSTANCE(receiver)) {
+        runtimeError("Only instances have methods.");
+        return false;
+    }
+
+    ObjInstance* instance = AS_INSTANCE(receiver);
+
+    Value value;
+    if (hashMapGet(&instance->fields, name, &value)) {
+        vm.stackTop[-argCount - 1] = value;
+        return callValue(value, argCount);
+    }
+
+    return invokeFromClass(instance->clas, name, argCount);
+}
+
 static InterpretResult run () {
 
     CallFrame* frame = &vm.frames[vm.frameCount - 1];
 
-    #define READ_BYTE() (*(frame -> ip++)) 
+    #define READ_BYTE() (*(frame -> ip++))
     #define READ_CONSTANT() (frame->closure->rawFunc -> chunk.constants.values[READ_BYTE()])
     #define READ_SHORT() \
         (frame -> ip += 2, \
@@ -237,10 +274,10 @@ static InterpretResult run () {
         printf("\n");
         disassembleInstruction(&frame->closure->rawFunc -> chunk, \
             (int)(frame -> ip - frame->closure->rawFunc -> chunk.code));
-#endif     
+#endif
 
         uint8_t instruction;
-        
+
         switch (instruction = READ_BYTE())
         {
             case OP_RETURN: {
@@ -249,12 +286,12 @@ static InterpretResult run () {
                 Value res = pop();
                 closeUpvalues(frame->slots);
                 vm.frameCount--;
-                
+
                 if (vm.frameCount == 0) {
                     pop();
                     return INTERPRET_OK;
                 }
-                
+
                 vm.stackTop = frame->slots;
                 push(res);
                 frame = &vm.frames[vm.frameCount - 1];
@@ -347,7 +384,7 @@ static InterpretResult run () {
             case OP_SET_GLOBAL: {
                 ObjString* name = READ_STRING();
 
-                // a new key 
+                // a new key
                 if (hashMapSet(&vm.globals, name, peek(0))) {
                     hashMapDelete(&vm.globals, name);
                     runtimeError("Undefined variable '%s'.", name -> chars);
@@ -375,7 +412,7 @@ static InterpretResult run () {
                 break;
             }
 
-            case OP_JUMP: 
+            case OP_JUMP:
             {
                 uint16_t offset = (uint16_t)READ_BYTE() << 8;
                 offset = offset | READ_BYTE();
@@ -391,7 +428,7 @@ static InterpretResult run () {
             }
             case OP_CALL: {
                 int argCount = READ_BYTE();
-                
+
                 if (!callValue(peek(argCount), argCount)) {
                     return INTERPRET_RUNTIME_ERROR;
                 }
@@ -413,7 +450,7 @@ static InterpretResult run () {
                         closure -> upvalues[i] = frame->closure->upvalues[index];
                     }
                 }
-                
+
                 break;
             }
 
@@ -442,7 +479,7 @@ static InterpretResult run () {
             }
             case OP_GET_PROPERTY: {
 
-                if (!IS_ISTANCE(peek(0))) {
+                if (!IS_INSTANCE(peek(0))) {
                     runtimeError("Only instances have properties.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
@@ -463,7 +500,7 @@ static InterpretResult run () {
                 break;
             }
             case OP_SET_PROPERTY: {
-                if (!IS_ISTANCE(peek(1))) {
+                if (!IS_INSTANCE(peek(1))) {
                     runtimeError("Only instance have field.");
                     return INTERPRET_RUNTIME_ERROR;
                 }
@@ -480,12 +517,21 @@ static InterpretResult run () {
                 defineMethod (READ_STRING());
                 break;
 
+            case OP_INVOKE: {
+                ObjString* method = READ_STRING();
+                int argCount = READ_BYTE();
+                if (!invoke(method, argCount )) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                frame = &vm.frames[vm.frameCount - 1];
+                break;
+            }
             default:
-            break;
+                break;
         }
     }
     return INTERPRET_OK;
-    
+
 #undef READ_BYYE
 #undef READ_SHORT
 #undef READ_STRING
@@ -503,12 +549,15 @@ void initVM () {
     vm.nextGC = 1024 * 1024;
 
     initHashMap(&vm.strings, 10);
-    initHashMap(&vm.globals, 5); 
+    initHashMap(&vm.globals, 5);
     resetStack();
+
+    vm.initString = NULL;
+    vm.initString = copyString("init", 4);
 
     defineNative("clock", clockNative, 0);
 }
-    
+
 InterpretResult interpret (const char* source) {
     ObjFunction* func = compile(source);
 
@@ -528,6 +577,8 @@ void freeVM () {
     freeObjects();
     freeHashMap(&vm.strings);
     freeHashMap(&vm.globals);
+
+    vm.initString = NULL;
 
     free(vm.grayStack);
 }

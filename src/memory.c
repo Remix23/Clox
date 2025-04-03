@@ -15,19 +15,19 @@ void* reallocate (void* pointer, size_t oldSize, size_t newSize) {
 #ifdef DEBUG_STRESS_GC
         collectGarbage();
 #endif
-    
+
         if (vm.bytesAlocated > vm.nextGC) {
             collectGarbage();
         }
     }
-    
+
     if (newSize == 0) {
         free(pointer);
         return NULL;
     }
 
     void* result = realloc(pointer, newSize);
-    
+
     if (result == NULL) exit(1);
     return result;
 }
@@ -83,7 +83,7 @@ static void freeObject (Obj* obj) {
         FREE(ObjBoundMethod, obj);
         break;
     }
-    
+
     default:
         break;
     }
@@ -117,9 +117,9 @@ void markObject (Obj* obj) {
     if (vm.grayCapacity < vm.grayCount + 1) {
         vm.grayCapacity = GROW_CAPACITY(vm.grayCapacity);
         vm.grayStack = (Obj**)realloc(vm.grayStack, vm.grayCapacity * sizeof(Obj*));
-        
+
         if (vm.grayStack == NULL) exit(1);
-    } 
+    }
 
     vm.grayStack[vm.grayCount++] = obj;
 }
@@ -143,6 +143,7 @@ static void markRoots () {
         markObject((Obj*) upvalue);
     }
     markCompilerRoots();
+    markObject((Obj*)vm.initString);
     markHashMap(&vm.globals);
 }
 
@@ -216,7 +217,7 @@ static void sweep () {
             Obj* to_free = curr;
             curr = curr -> next;
             if (previous == NULL) {
-                vm.objects = curr; 
+                vm.objects = curr;
             } else {
                 previous->next = curr;
             }
@@ -231,7 +232,7 @@ static void sweep () {
 }
 
 void collectGarbage () {
-#ifdef DEBUG_LOG_GC 
+#ifdef DEBUG_LOG_GC
     printf("-- gc begin\n");
 #endif
 

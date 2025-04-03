@@ -16,7 +16,7 @@
 #define IS_CLOSURE(value) isObjType(value, OBJ_CLOSURE)
 #define IS_UPVALUE(value) isObjType(value, OBJ_UPVALUE)
 #define IS_CLASS(value) isObjType(value, OBJ_CLASS)
-#define IS_ISTANCE(value) isObjType(value, OBJ_INSTANCE)
+#define IS_INSTANCE(value) isObjType(value, OBJ_INSTANCE)
 #define IS_BOUNDMETHOD(value) isObjType(value, OBJ_BOUND_METHOD)
 
 #define AS_STRING(value) ((ObjString*)AS_OBJ(value))
@@ -129,7 +129,7 @@ void printObject(Value value);
 
 #endif
 
-// i++ != ++i 
+// i++ != ++i
 
 // i++ -> i = i + 1, i - 1
 // ++i -> i = i + 1, i

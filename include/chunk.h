@@ -13,13 +13,13 @@ typedef enum {
     OP_TRUE,
     OP_FALSE,
     OP_NIL,
-    
+
 
     // Logical
     // ! Normmally we would make more operations but less complex
     // ? eg. make a OP_NOT_EQUAL, OP_LESS_EQUAL, OP_GREATER_EQUAL
     OP_EQUAL,
-    OP_GREATER, 
+    OP_GREATER,
     OP_LESS,
 
     OP_NOT,
@@ -33,7 +33,7 @@ typedef enum {
     OP_MULTIPLY,
     OP_DIVIDE,
 
-    // TODO: Add support for 
+    // TODO: Add support for
     OP_CONSTANT_LONG,
 
     // statements
@@ -69,6 +69,9 @@ typedef enum {
     OP_SET_PROPERTY,
 
     OP_METHOD,
+
+    // optimalisations
+    OP_INVOKE,
 } OpCode;
 
 typedef struct {

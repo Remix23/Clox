@@ -18,6 +18,7 @@ typedef struct {
 typedef struct {
     CallFrame frames [MAX_FRAMES];
     int frameCount;
+    ObjString* initString;
 
     ObjUpvalue* openUpvalues;
 

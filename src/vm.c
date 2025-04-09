@@ -477,6 +477,44 @@ static InterpretResult run () {
                 push(OBJ_VAL(newCLass(name)));
                 break;
             }
+
+            case OP_INHERIT: {
+                Value superClass = peek(1);
+                if (!IS_CLASS(superClass)) {
+                    runtimeError("Can only inherit from classes.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                ObjClass* subclass = AS_CLASS(peek(0));
+
+                hashMapAddAll(&AS_CLASS(superClass)->methods, &subclass-> methods);
+                pop();
+                break;
+            }
+
+            case OP_SUPER_INVOKE : {
+                ObjString* method = READ_STRING();
+                int argcount = READ_BYTE();
+                ObjClass* superclass = AS_CLASS(pop());
+                if (!invokeFromClass(superclass, method, argcount)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                frame = &vm.frames[vm.frameCount - 1];
+                break;
+            }
+
+            case OP_GET_SUPER: {
+                ObjString* name = READ_STRING();
+                ObjClass* superClass = AS_CLASS(pop());
+
+                if (!bindMethod(superClass, name)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+
+                break;
+            }
+
             case OP_GET_PROPERTY: {
 
                 if (!IS_INSTANCE(peek(0))) {

@@ -1,6 +1,6 @@
 hearder := ./include
 
-CFLAGS := -I $(hearder) -std=c99 -Wall -Werror -fsanitize=address
+CFLAGS := -I $(hearder) -std=c99 -Wall  -fsanitize=address
 
 SRC := $(shell find src -maxdepth 1 -name "*.c")
 HEADERS = $(shell find include -maxdepth 1 -name "*.h")
@@ -31,10 +31,10 @@ clean:
 .PHONY: build run clean
 
 # CC = clang
-# CFLAGS = -I $(hearder) -std=c99 
+# CFLAGS = -I $(hearder) -std=c99
 
 # main: $(obj)
 # 	$(CC) $(CFLAGS) -o $@ $^
 
-# # clean: 
+# # clean:
 # # 	rm -f *.o

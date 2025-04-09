@@ -40,15 +40,6 @@ static int invokeInstruction(const char* name, Chunk* chunk, int offset) {
     return offset + 3;
 }
 
-static int invokeSuperInstruction(const char* name, Chunk* chunk, int offset) {
-    uint8_t constant = chunk -> code[offset + 1];
-    uint8_t argCount = chunk -> code[offset + 2];
-    printf("%-16s %4d '", name, constant);
-    printValue(chunk -> constants.values[constant]);
-    printf("', %d\n", argCount);
-    return offset + 3;
-}
-
 int disassembleInstruction(Chunk* chunk, int offset) {
     printf("%04d ", offset);
 
@@ -159,7 +150,12 @@ int disassembleInstruction(Chunk* chunk, int offset) {
             return constantInstruction("OP_METHOD", chunk, offset);
         case OP_INVOKE:
             return constantInstruction("OP_INVOKE", chunk, offset);
-
+        case OP_SUPER_INVOKE:
+            return invokeInstruction("OP_SUPER_INVOKE", chunk, offset);
+        case OP_GET_SUPER:
+            return constantInstruction("OP_GET_SUPER", chunk, offset);
+        case OP_INHERIT:
+            return simpleInstruction("OP_INHERIT", offset);
         default:
             printf("Unexpected opcode %d\n", instruction);
             return offset + 1;

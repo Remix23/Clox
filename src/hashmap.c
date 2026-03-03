@@ -11,7 +11,7 @@
 #define TABLE_MAX_LOAD 0.75
 
 static Entry* findEntry (Entry* entries, int capacity, ObjString* key) {
-    uint32_t index = key -> hash % capacity;
+    uint32_t index = key -> hash & (capacity - 1);
 
     Entry* tombstone = NULL;
 
@@ -29,7 +29,7 @@ static Entry* findEntry (Entry* entries, int capacity, ObjString* key) {
 
         }
 
-        index = (index + 1) % capacity;
+        index = (index + 1) & (capacity - 1);
     }
 }
 
@@ -53,7 +53,7 @@ static void adjustCapacity (HashMap* map, int capacity) {
     }
 
     free(map -> entries);
-    map -> entries = entries; 
+    map -> entries = entries;
     map -> capacity = capacity;
 }
 
@@ -73,7 +73,7 @@ bool hashMapSet (HashMap* map, ObjString* key, Value value) {
 
         adjustCapacity(map, capacity);
     }
-    
+
     Entry* entry = findEntry(map -> entries, map -> capacity, key);
 
     bool isNewKey = entry -> key == NULL;
@@ -123,20 +123,20 @@ bool hashMapDelete (HashMap* map, ObjString* key) {
 ObjString* hashMapFindString (HashMap* map, const char* chars, int lenght, uint32_t hash) {
     if (map -> count == 0) return NULL;
 
-    uint32_t index = hash % map -> capacity;
+    uint32_t index = hash & (map -> capacity - 1);
 
     for (;;) {
         Entry* entry = &map -> entries[index];
 
         if (entry -> key == NULL) {
             if (IS_NIL(entry -> value)) return NULL;
-        } else if (entry -> key -> length == lenght && 
-                entry -> key -> hash == hash && 
+        } else if (entry -> key -> length == lenght &&
+                entry -> key -> hash == hash &&
                 memcmp(entry -> key -> chars, chars, lenght) == 0) {
             return entry -> key;
         }
 
-        index = (index + 1) % map -> capacity;
+        index = (index + 1) & (map -> capacity - 1);
     }
 }
 

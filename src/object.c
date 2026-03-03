@@ -123,18 +123,18 @@ ObjUpvalue* newUpvalue (Value* slot) {
     upvalue->closed = NIL_VAL;
     return upvalue;
 }
-
+//
 ObjClass* newCLass (ObjString* name) {
     ObjClass* clas = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
     clas ->name = name;
-    initHashMap(&clas->methods, 0);
+    initHashMap(&clas->methods);
     return clas;
 }
 
 ObjInstance* newInstance (ObjClass* clas) {
     ObjInstance* instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE);
     instance->clas = clas;
-    initHashMap(&instance->fields, 0);
+    initHashMap(&instance->fields);
     return instance;
 }
 

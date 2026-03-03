@@ -11,7 +11,7 @@
 #define TABLE_MAX_LOAD 0.75
 
 static Entry* findEntry (Entry* entries, int capacity, ObjString* key) {
-    uint32_t index = key -> hash & (capacity - 1);
+    uint32_t index = key -> hash % (capacity - 1);
 
     Entry* tombstone = NULL;
 
@@ -29,18 +29,19 @@ static Entry* findEntry (Entry* entries, int capacity, ObjString* key) {
 
         }
 
-        index = (index + 1) & (capacity - 1);
+        index = (index + 1) % (capacity - 1);
     }
 }
 
 static void adjustCapacity (HashMap* map, int capacity) {
     Entry* entries = ALLOCATE(Entry, capacity);
-    map -> count = 0;
 
     for (int i = 0; i < capacity; i++) {
         entries[i].key = NULL;
         entries[i].value = NIL_VAL;
     }
+
+    map -> count = 0;
 
     for (int i = 0; i < map -> capacity; i++) {
         Entry* entry = &map -> entries[i];
@@ -57,14 +58,10 @@ static void adjustCapacity (HashMap* map, int capacity) {
     map -> capacity = capacity;
 }
 
-void initHashMap (HashMap* map, int init_size) {
-    map->capacity = init_size;
+void initHashMap (HashMap* map) {
+    map->capacity = 0;
     map->count = 0;
-    map->entries = (Entry*) malloc(sizeof(Entry) * init_size);
-    for (int i = 0; i < init_size; i++) {
-        map->entries[i].key = NULL;
-        map->entries[i].value = NIL_VAL;
-    }
+    map->entries = NULL;
 }
 
 bool hashMapSet (HashMap* map, ObjString* key, Value value) {
@@ -123,7 +120,7 @@ bool hashMapDelete (HashMap* map, ObjString* key) {
 ObjString* hashMapFindString (HashMap* map, const char* chars, int lenght, uint32_t hash) {
     if (map -> count == 0) return NULL;
 
-    uint32_t index = hash & (map -> capacity - 1);
+    uint32_t index = hash % (map -> capacity - 1);
 
     for (;;) {
         Entry* entry = &map -> entries[index];
@@ -136,7 +133,7 @@ ObjString* hashMapFindString (HashMap* map, const char* chars, int lenght, uint3
             return entry -> key;
         }
 
-        index = (index + 1) & (map -> capacity - 1);
+        index = (index + 1) % (map -> capacity - 1);
     }
 }
 
@@ -158,8 +155,6 @@ void hashMapRemoveWhite (HashMap* map) {
 }
 
 void freeHashMap (HashMap* map) {
-    if (map->entries != NULL)
-        free(map->entries);
-
-    initHashMap(map, 0);
+    FREE_ARRAY(Entry, map -> entries, map -> capacity);
+    initHashMap(map);
 }

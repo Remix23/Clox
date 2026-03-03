@@ -17,7 +17,7 @@ typedef struct {
     Entry* entries;
 } HashMap;
 
-void initHashMap(HashMap* map, int init_size);
+void initHashMap(HashMap* map);
 
 void freeHashMap (HashMap *map);
 

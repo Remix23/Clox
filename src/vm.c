@@ -577,6 +577,9 @@ static InterpretResult run () {
 }
 
 void initVM () {
+
+    resetStack();
+
     vm.objects = NULL;
 
     vm.grayCapacity = 0;
@@ -586,9 +589,8 @@ void initVM () {
     vm.bytesAlocated = 0;
     vm.nextGC = 1024 * 1024;
 
-    initHashMap(&vm.strings, 10);
-    initHashMap(&vm.globals, 5);
-    resetStack();
+    initHashMap(&vm.strings);
+    initHashMap(&vm.globals);
 
     vm.initString = NULL;
     vm.initString = copyString("init", 4);
